@@ -55,7 +55,7 @@ description: "Danh sách tác vụ triển khai firmware xe thông minh với D-
 - [X] T015 [US1] Triển khai phối hợp tốc độ cardinal/chéo theo loại khung xe trong `src/motor_driver.cpp` và `include/motor_driver.h` dựa trên `docs/hardware-pin-map.md`; DoD: mỗi hướng chéo được hỗ trợ ánh xạ thành tổ hợp bánh/PWM đã duyệt, hướng chéo không hỗ trợ trả về kết quả rõ ràng mà không tạo chuyển động, ánh xạ cardinal vẫn đúng và `STOP` đưa mọi kênh về 0.
 - [X] T016 [US1] Thêm xử lý tick timeout/mất kết nối của controller trong `src/robot_controller.cpp`; DoD: trạng thái đang chuyển động dừng sau timeout đơn điệu đã cấu hình hoặc phiên bị cũ, lý do an toàn được giữ lại và lệnh cardinal/chéo được làm mới sẽ ngăn dừng sớm.
 - [X] T017 [US1] Kết nối controller, motor driver và quyền sở hữu task trong `src/main.cpp`, `include/task_webapp.h` và `include/system_context.h`; DoD: một controller duy nhất sở hữu chuyển động, LED task hiện có vẫn hoạt động, code web không thể bỏ qua controller và lỗi khởi động có thể quan sát được.
-- [ ] T018 [US1] Chạy kiểm thử native của controller và build ESP32 cho `test/test_robot_controller/` và `platformio.ini`; DoD: `pio test -e native` và `pio run -e esp32-s3-devkitc-1` thành công, không xuất hiện cảnh báo controller mới.
+- [X] T018 [US1] Chạy kiểm thử native của controller và build ESP32 cho `test/test_robot_controller/` và `platformio.ini`; DoD: `pio test -e native` và `pio run -e esp32-s3-devkitc-1` thành công, không xuất hiện cảnh báo controller mới.
 
 **Checkpoint**: chuyển động 8 hướng được mô hình hóa và hoặc được driver đã duyệt thực thi, hoặc bị từ chối an toàn mà không phụ thuộc trình duyệt.
 
@@ -69,7 +69,7 @@ description: "Danh sách tác vụ triển khai firmware xe thông minh với D-
 
 ### Kiểm thử cho User Story 2
 
-- [ ] T019 [P] [US2] Thêm kiểm thử hợp đồng endpoint lệnh trong `test/test_web_contract/test_commands.cpp`; DoD: `/api/cmd` chỉ chấp nhận `F|B|L|R|S` cũ, bộ phân tích lệnh có phiên bản chấp nhận cả tám hướng, dữ liệu sai/không được hỗ trợ trả về 4xx và phản hồi hợp lệ xác nhận chuyển động đã chấp nhận.
+- [X] T019 [P] [US2] Thêm kiểm thử hợp đồng endpoint lệnh trong `test/test_web_contract/test_commands.cpp`; DoD: `/api/cmd` chỉ chấp nhận `F|B|L|R|S` cũ, bộ phân tích lệnh có phiên bản chấp nhận cả tám hướng, dữ liệu sai/không được hỗ trợ trả về 4xx và phản hồi hợp lệ xác nhận chuyển động đã chấp nhận.
 - [ ] T020 [P] [US2] Thêm kiểm thử serialize telemetry trong `test/test_telemetry/test_serialization.cpp`; DoD: JSON có `schema_version` dương, `device_id`, trạng thái, mọi trường tính hợp lệ của cảm biến và các giá trị `motion` bao gồm hướng chéo mà không thay đổi ngữ nghĩa payload cảm biến hiện có.
 - [ ] T021 [P] [US2] Thêm kiểm thử xử lý cảm biến trong `test/test_sensors/test_readings.cpp`; DoD: khoảng cách âm, độ ẩm ngoài 0–100, lần đọc DHT bị thiếu, mẫu cũ và lần đọc pin không hợp lệ được đánh dấu không hợp lệ/cũ thay vì bịa dữ liệu.
 
