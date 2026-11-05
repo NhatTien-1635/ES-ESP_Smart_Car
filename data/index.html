@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Car Controller</title>
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    :root { --cell: min(25vh, 20vw); }
+    html, body {
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
+    body {
+      position: fixed;
+      inset: 0;
+      font-family: Arial, sans-serif;
+      background: #11151c;
+      color: #e8ecf1;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      touch-action: manipulation;
+    }
+    button { font-family: inherit; touch-action: none; }
+
+    /* ---------- Layout ---------- */
+    .app {
+      display: grid;
+      grid-template-columns: 1fr clamp(130px, 22vw, 190px);
+      height: 100vh;
+      height: 100dvh;
+    }
+    main { position: relative; min-width: 0; padding: 2vh 3vw; }
+    .view { display: none; height: 100%; }
+    #viewControl.active { display: flex; align-items: center; gap: 3vw; }
+    #viewTelemetry.active { display: grid; }
+
+    /* ---------- D-pad ---------- */
+    #dpad {
+      display: grid;
+      grid-template-columns: repeat(3, var(--cell));
+      grid-template-rows: repeat(3, var(--cell));
+      gap: 1.5vh;
+      flex: none;
+    }
+    #dpad button {
+      font-size: calc(var(--cell) * 0.4);
+      border: none;
+      border-radius: 18px;
+      background: #232b38;
+      color: #e8ecf1;
+    }
+    #dpad button.pressed { background: #3d8bfd; }
+    #dpad .up    { grid-column: 2; grid-row: 1; }
+    #dpad .left  { grid-column: 1; grid-row: 2; }
+    #dpad .right { grid-column: 3; grid-row: 2; }
+    #dpad .down  { grid-column: 2; grid-row: 3; }
+    #dpad.disabled { opacity: 0.3; pointer-events: none; }
+
+    /* ---------- Readout (control view) ---------- */
+    #readout { flex: 1; text-align: center; min-width: 0; }
+    .rl { font-size: 12px; color: #8a96a8; text-transform: uppercase; letter-spacing: 1px; margin-top: 2vh; }
+    #cmdText { font-size: clamp(22px, 9vh, 48px); font-weight: bold; }
+    #modeText { font-size: clamp(16px, 6vh, 30px); }
+
+    /* ---------- Telemetry view ---------- */
+    #viewTelemetry { grid-template-columns: repeat(3, 1fr); grid-template-rows: 1fr 1fr; gap: 1.5vh; }
+    .tile {
+      background: #1a202b;
+      border-radius: 14px;
+      padding: 1.5vh 1vw;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-width: 0;
+    }
+    .tile .label { font-size: 12px; color: #8a96a8; margin-bottom: 0.5vh; }
+    .tile .value { font-size: clamp(22px, 9vh, 44px); font-weight: bold; }
+    .tile .unit { font-size: 13px; color: #8a96a8; margin-left: 4px; }
+    .tile.wide { grid-column: span 2; }
+    #sensors { display: flex; gap: 2vw; }
+    .sensor { width: clamp(22px, 8vh, 40px); height: clamp(22px, 8vh, 40px); border-radius: 50%; background: #2f3a4b; }
+    .sensor.hit { background: #3ddc84; }
+
+    /* ---------- Sidebar ---------- */
+    aside {
+      display: flex;
+      flex-direction: column;
+      gap: 1vh;
+      padding: 1.5vh 1.5vw 1.5vh 0;
+      background: #11151c;
+    }
+    .top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+    #statusBadge { font-size: 12px; padding: 4px 10px; border-radius: 12px; background: #5a2a2a; }
+    #statusBadge.on { background: #1f5a34; }
+    #fsBtn { width: 34px; height: 30px; font-size: 16px; border: none; border-radius: 8px; background: #232b38; color: #e8ecf1; }
+    .tab {
+      padding: 0;
+      height: 11vh;
+      min-height: 36px;
+      font-size: 14px;
+      border: none;
+      border-radius: 10px;
+      background: #1a202b;
+      color: #8a96a8;
+    }
+    .tab.active { background: #2b3a55; color: #fff; box-shadow: inset 4px 0 0 #3d8bfd; }
+    #lineBtn {
+      min-height: 44px;
+      height: 15vh;
+      font-size: 13px;
+      line-height: 1.2;
+      border: none;
+      border-radius: 10px;
+      background: #2f3a4b;
+      color: #fff;
+    }
+    #lineBtn.on { background: #e08a00; }
+    #stopBtn {
+      flex: 1;
+      min-height: 52px;
+      font-size: clamp(18px, 6vh, 28px);
+      font-weight: bold;
+      border: none;
+      border-radius: 14px;
+      background: #b02a2a;
+      color: #fff;
+    }
+    #stopBtn:active { background: #e03c3c; }
+
+    /* ---------- Rotate hint (phones held upright) ---------- */
+    #rotate {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      background: #11151c;
+      color: #e8ecf1;
+      font-size: 20px;
+      text-align: center;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    @media (orientation: portrait) and (pointer: coarse) {
+      #rotate { display: flex; }
+      .app { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="rotate">Rotate your phone to landscape</div>
+
+<div class="app">
+  <main>
+    <!-- CONTROL -->
+    <section id="viewControl" class="view active">
+      <div id="dpad">
+        <button class="up"    data-cmd="F">&#9650;</button>
+        <button class="left"  data-cmd="L">&#9664;</button>
+        <button class="right" data-cmd="R">&#9654;</button>
+        <button class="down"  data-cmd="B">&#9660;</button>
+      </div>
+      <div id="readout">
+        <div class="rl">Command</div>
+        <div id="cmdText">STOP</div>
+        <div class="rl">Mode</div>
+        <div id="modeText">--</div>
+      </div>
+    </section>
+
+    <!-- TELEMETRY -->
+    <section id="viewTelemetry" class="view">
+      <div class="tile"><div class="label">Speed</div><div><span class="value" id="tSpeed">--</span><span class="unit">cm/s</span></div></div>
+      <div class="tile"><div class="label">Battery</div><div><span class="value" id="tBattery">--</span><span class="unit">V</span></div></div>
+      <div class="tile"><div class="label">Distance</div><div><span class="value" id="tDistance">--</span><span class="unit">cm</span></div></div>
+      <div class="tile"><div class="label">Mode</div><div><span class="value" id="tMode">--</span></div></div>
+      <div class="tile wide"><div class="label">Line sensors</div><div id="sensors"></div></div>
+    </section>
+  </main>
+
+  <aside>
+    <div class="top">
+      <span id="statusBadge">Offline</span>
+      <button id="fsBtn" title="Fullscreen">&#9974;</button>
+    </div>
+    <button class="tab active" id="tabControl">Control</button>
+    <button class="tab" id="tabTelemetry">Telemetry</button>
+    <button id="lineBtn">Line tracing<br>OFF</button>
+    <button id="stopBtn">STOP</button>
+  </aside>
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+
+  // ---------- Network helper (times out so requests never pile up) ----------
+  function api(url, ms = 1000) {
+    const c = new AbortController();
+    const t = setTimeout(() => c.abort(), ms);
+    return fetch(url, { signal: c.signal, cache: "no-store" }).finally(() => clearTimeout(t));
+  }
+
+  function setOnline(ok) {
+    $("statusBadge").textContent = ok ? "Connected" : "Offline";
+    $("statusBadge").classList.toggle("on", ok);
+  }
+
+  // ---------- Tabs ----------
+  function showTab(name) {
+    const isControl = name === "control";
+    $("viewControl").classList.toggle("active", isControl);
+    $("viewTelemetry").classList.toggle("active", !isControl);
+    $("tabControl").classList.toggle("active", isControl);
+    $("tabTelemetry").classList.toggle("active", !isControl);
+    if (!isControl) forceStop();               // never keep driving while the D-pad is hidden
+  }
+  $("tabControl").onclick = () => showTab("control");
+  $("tabTelemetry").onclick = () => showTab("telemetry");
+
+  // ---------- D-pad ----------
+  // F = forward, B = backward, L = left, R = right, S = stop
+  const NAMES = { F: "FORWARD", B: "BACKWARD", L: "LEFT", R: "RIGHT", S: "STOP" };
+  const dpad = $("dpad");
+  let current = "S";
+  let heldBtn = null;
+  let lineTracing = false;
+
+  function sendCmd(c) {
+    $("cmdText").textContent = NAMES[c];
+    api(`/api/cmd?d=${c}`)
+      .then(() => setOnline(true))
+      .catch(() => setOnline(false));
+  }
+
+  function sendStop() {                        // sent twice in case the first one is lost
+    sendCmd("S");
+    setTimeout(() => sendCmd("S"), 100);
+  }
+
+  function press(c, btn) {
+    if (lineTracing) return;
+    if (heldBtn) heldBtn.classList.remove("pressed");
+    heldBtn = btn || null;
+    if (heldBtn) heldBtn.classList.add("pressed");
+    current = c;
+    sendCmd(c);
+  }
+
+  function release(btn) {
+    if (btn && heldBtn !== btn) return;        // ignore releases of buttons that are not the active one
+    if (heldBtn) heldBtn.classList.remove("pressed");
+    heldBtn = null;
+    if (current !== "S") { current = "S"; sendStop(); }
+  }
+
+  function forceStop() {
+    if (heldBtn) heldBtn.classList.remove("pressed");
+    heldBtn = null;
+    current = "S";
+    sendStop();
+  }
+
+  dpad.querySelectorAll("button").forEach(btn => {
+    const c = btn.dataset.cmd;
+    btn.addEventListener("pointerdown", e => {
+      btn.setPointerCapture(e.pointerId);
+      press(c, btn);
+    });
+    btn.addEventListener("pointerup", () => release(btn));
+    btn.addEventListener("pointercancel", () => release(btn));
+  });
+
+  // Re-send the held command every 150 ms so the car's ESP can stop on timeout if Wi-Fi drops
+  setInterval(() => { if (current !== "S" && !lineTracing) sendCmd(current); }, 150);
+
+  // Keyboard (handy for testing on a PC)
+  const keyMap = { ArrowUp: "F", ArrowDown: "B", ArrowLeft: "L", ArrowRight: "R", w: "F", s: "B", a: "L", d: "R" };
+  document.addEventListener("keydown", e => {
+    const c = keyMap[e.key];
+    if (!c || e.repeat) return;
+    e.preventDefault();
+    press(c, dpad.querySelector(`[data-cmd="${c}"]`));
+  });
+  document.addEventListener("keyup", e => {
+    const c = keyMap[e.key];
+    if (c) release(dpad.querySelector(`[data-cmd="${c}"]`));
+  });
+
+  // Stop if the page goes to the background or loses focus
+  document.addEventListener("visibilitychange", () => { if (document.hidden) forceStop(); });
+  window.addEventListener("blur", forceStop);
+
+  // ---------- Line tracing ----------
+  function setLineTracing(on) {
+    lineTracing = on;
+    $("lineBtn").classList.toggle("on", on);
+    $("lineBtn").innerHTML = "Line tracing<br>" + (on ? "ON" : "OFF");
+    dpad.classList.toggle("disabled", on);
+    if (on) forceStop();
+    api(`/api/linetrace?on=${on ? 1 : 0}`)
+      .then(() => setOnline(true))
+      .catch(() => setOnline(false));
+  }
+  $("lineBtn").onclick = () => setLineTracing(!lineTracing);
+
+  // ---------- STOP (always visible) ----------
+  $("stopBtn").addEventListener("pointerdown", () => {
+    if (lineTracing) setLineTracing(false);    // STOP also cancels line tracing
+    forceStop();
+  });
+
+  // ---------- Fullscreen ----------
+  const root = document.documentElement;
+  if (!root.requestFullscreen) $("fsBtn").style.display = "none";   // e.g. iPhone Safari
+  $("fsBtn").onclick = () => {
+    if (document.fullscreenElement) { document.exitFullscreen(); return; }
+    root.requestFullscreen()
+      .then(() => { if (screen.orientation && screen.orientation.lock) screen.orientation.lock("landscape").catch(() => {}); })
+      .catch(() => {});
+  };
+
+  // No long-press menu on buttons
+  document.addEventListener("contextmenu", e => e.preventDefault());
+
+  // ---------- Telemetry ----------
+  const sensorsBox = $("sensors");
+  for (let i = 0; i < 5; i++) {                // 5 line sensors, change if you have more/less
+    const d = document.createElement("div");
+    d.className = "sensor";
+    sensorsBox.appendChild(d);
+  }
+
+  // Polls fast while the Telemetry tab is open, slowly otherwise (keeps the Connected badge fresh)
+  function pollLoop() {
+    const visible = $("viewTelemetry").classList.contains("active");
+    api("/api/telemetry", 1500)
+      .then(r => r.json())
+      .then(t => {
+        setOnline(true);
+        $("modeText").textContent = t.mode;
+        if (visible) {
+          $("tSpeed").textContent = t.speed;
+          $("tBattery").textContent = t.battery;
+          $("tDistance").textContent = t.distance;
+          $("tMode").textContent = t.mode;
+          [...sensorsBox.children].forEach((el, i) => el.classList.toggle("hit", !!t.line[i]));
+        }
+      })
+      .catch(() => setOnline(false))
+      .finally(() => setTimeout(pollLoop, visible ? 500 : 2000));
+  }
+  pollLoop();
+</script>
+</body>
+</html>

@@ -1,18 +1,35 @@
 #include <Arduino.h>
+#include "task_webapp.h"
 
-// put function declarations here:
-int myFunction(int, int);
+#define LED_PIN 2
 
-void setup() {
-  // put your setup code here, to run once:
-  int result = myFunction(2, 3);
+void Task_BlinkingLed(void *)
+{
+  bool on = false;
+  pinMode(LED_PIN, OUTPUT);
+  while (true)
+  {
+    if (on)
+    {
+      digitalWrite(LED_PIN, HIGH);
+      on = false;
+    }
+    else
+    {
+      digitalWrite(LED_PIN, LOW);
+      on = true;
+    }
+    vTaskDelay(1000);
+  }
 }
 
-void loop() {
-  // put your main code here, to run repeatedly:
+void setup()
+{
+  Serial.begin(115200);
+  xTaskCreate(Task_WebApp, "Webapp", 8192, nullptr, 0, nullptr);
+  xTaskCreate(Task_BlinkingLed, "Blinking LED", 1024, nullptr, 1, nullptr);
 }
 
-// put function definitions here:
-int myFunction(int x, int y) {
-  return x + y;
+void loop()
+{
 }
