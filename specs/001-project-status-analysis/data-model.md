@@ -1,5 +1,12 @@
 # Data Model: Robot control and telemetry
 
+## Contract invariants
+
+- The current hardware configuration contains exactly five line sensors.
+- Motion direction is an explicit enum with `STOP` plus eight directions; diagonal values are never downgraded to cardinal values.
+- A telemetry snapshot is copied atomically from controller and sensor state before JSON serialization.
+- Sensor validity distinguishes `VALID`, `MISSING`, `STALE` and `INVALID`; unavailable data is not represented as a fabricated zero.
+
 ## RobotState
 
 Đại diện trạng thái vận hành duy nhất của robot.
@@ -32,13 +39,14 @@ Snapshot đọc từ phần cứng.
 
 | Field | Type | Rules |
 |---|---|---|
-| `line` | array of boolean/enum | cardinality phải khớp cấu hình; invalid sample có validity flag |
-| `distance_cm` | number | non-negative; unavailable được biểu diễn bằng validity/error |
-| `temperature_c` | number | chỉ hợp lệ khi DHT sample thành công |
-| `humidity_percent` | number | 0–100 khi hợp lệ |
-| `battery_v` | number | non-negative; cần calibration metadata trước khi coi là chính xác |
+| `line` | array of boolean/enum | exactly 5 elements; invalid sample has validity/error metadata |
+| `distance_cm` | number/null | non-negative when valid; unavailable is represented by validity/error metadata |
+| `temperature_c` | number/null | valid only when the DHT sample succeeds |
+| `humidity_percent` | number/null | 0–100 when valid |
+| `battery_v` | number/null | non-negative; calibration metadata is required before treating it as accurate |
 | `sampled_at` | timestamp | thời điểm snapshot |
-| `validity` | flags | phân biệt missing, stale và invalid |
+| `validity` | per-sensor enum | each sensor is `VALID`, `MISSING`, `STALE` or `INVALID` |
+| `errors` | per-sensor code, optional | explains missing, stale or invalid readings without fabricating a value |
 
 ## TelemetrySnapshot
 
@@ -48,9 +56,10 @@ Payload đọc bởi UI.
 - `device_id`: định danh robot.
 - `state`: `RobotState` rút gọn.
 - `sensors`: `SensorReading`.
-- `connection`: firmware-side session/safety status.
+- `connection.status`: `CONNECTED`, `DISCONNECTED` hoặc `STALE`.
+- `connection.last_client_at`: monotonic timestamp hoặc `null`.
 
-Snapshot phải tự nhất quán; không trộn state từ thời điểm này với sensor reading quá cũ mà không đánh dấu stale.
+Snapshot phải tự nhất quán; không trộn state từ thời điểm này với sensor reading quá cũ mà không đánh dấu `STALE`. Không serialize trong vùng lock bảo vệ state.
 
 ## State transitions
 
@@ -71,3 +80,10 @@ Snapshot phải tự nhất quán; không trộn state từ thời điểm này 
 - `BACKWARD_LEFT` và `BACKWARD_RIGHT` phối hợp thành phần lùi với thành phần rẽ tương ứng.
 - Mỗi hướng chéo là một giá trị command độc lập; không được tự động hạ xuống hướng thẳng gần nhất.
 - Nếu driver/chassis chưa hỗ trợ phối hợp hướng chéo, controller phải từ chối command với lỗi rõ ràng và giữ `motion=STOP`.
+
+## Telemetry sampling and safety invariants
+
+- Environment and battery samples refresh every 2–5 seconds.
+- Motion and safety state update after every accepted command and safety tick.
+- Repeated telemetry requests do not trigger a new hardware sensor read.
+- When a client becomes stale or disconnected, the robot stops and telemetry must not claim that motion continues.
