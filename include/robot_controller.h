@@ -12,11 +12,21 @@ namespace robot
 class RobotController final
 {
 public:
-    explicit RobotController(MotorDriver& motor);
+    static constexpr Timestamp kDefaultCommandTimeout = 100;
+
+    explicit RobotController(
+        MotorDriver& motor,
+        Timestamp commandTimeout = kDefaultCommandTimeout);
 
     // Validate and apply one command at the time it was received.
     CommandResult handleCommand(const ControlCommand& command,
                                 Timestamp receivedAt);
+
+    // Stop stale motion using a monotonic control-loop timestamp.
+    void tick(Timestamp now);
+
+    // Stop active motion when the controlling client is no longer connected.
+    void onClientDisconnected();
 
     const RobotState& state() const;
 
@@ -30,9 +40,10 @@ private:
                             Timestamp receivedAt);
     CommandResult applyMode(RobotMode mode, Timestamp receivedAt);
     CommandResult applyStop(Timestamp receivedAt);
-    void clearMotion(SafetyReason reason);
+    void stopForSafety(SafetyReason reason);
 
     MotorDriver& motor_;
+    Timestamp commandTimeout_;
     RobotState state_{};
 };
 

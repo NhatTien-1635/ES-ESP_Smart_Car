@@ -3,8 +3,10 @@
 namespace robot
 {
 
-RobotController::RobotController(MotorDriver& motor)
-    : motor_(motor)
+RobotController::RobotController(MotorDriver& motor,
+                                 Timestamp commandTimeout)
+    : motor_(motor),
+      commandTimeout_(commandTimeout)
 {
 }
 
@@ -31,6 +33,26 @@ CommandResult RobotController::handleCommand(const ControlCommand& command,
 const RobotState& RobotController::state() const
 {
     return state_;
+}
+
+void RobotController::tick(Timestamp now)
+{
+    if (state_.motion == MotionDirection::STOP
+        || now < state_.lastCommandAt
+        || now - state_.lastCommandAt < commandTimeout_)
+    {
+        return;
+    }
+
+    stopForSafety(SafetyReason::TIMEOUT);
+}
+
+void RobotController::onClientDisconnected()
+{
+    if (state_.motion != MotionDirection::STOP)
+    {
+        stopForSafety(SafetyReason::DISCONNECTED);
+    }
 }
 
 bool RobotController::isMoveDirection(MotionDirection direction)
@@ -96,8 +118,7 @@ CommandResult RobotController::applyMove(const ControlCommand& command,
         motor_.setMotion(command.direction, command.speed);
     if (result != MotorResult::APPLIED)
     {
-        motor_.stopAll();
-        clearMotion(SafetyReason::NONE);
+        stopForSafety(SafetyReason::NONE);
         return reject(CommandStatus::UNSUPPORTED);
     }
 
@@ -132,8 +153,9 @@ CommandResult RobotController::applyStop(Timestamp receivedAt)
     return {CommandStatus::ACCEPTED, state_.motion};
 }
 
-void RobotController::clearMotion(SafetyReason reason)
+void RobotController::stopForSafety(SafetyReason reason)
 {
+    motor_.stopAll();
     state_.mode = RobotMode::IDLE;
     state_.motion = MotionDirection::STOP;
     state_.speed = 0;
