@@ -12,6 +12,8 @@
 #include <ArduinoJson.h>
 #include <Preferences.h>
 
+#include "system_context.h"
+
 #define SSID "ESP32_WebModule"
 #define PASSWORD "88888888"
 
