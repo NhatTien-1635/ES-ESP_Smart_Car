@@ -45,9 +45,9 @@ description: "Danh sách tác vụ triển khai firmware xe thông minh với D-
 
 ### Kiểm thử cho User Story 1
 
-- [ ] T011 [P] [US1] Viết kiểm thử xác thực lệnh 8 hướng trong `test/test_robot_controller/test_direction_validation.cpp`; DoD: cả tám giá trị hướng đều được chấp nhận, hướng không biết/thiếu bị từ chối, tốc độ ngoài khoảng 0–100 bị từ chối và hướng chéo không hỗ trợ khiến trạng thái cùng động cơ dừng.
-- [ ] T012 [P] [US1] Viết kiểm thử chuyển trạng thái và thay thế lệnh trong `test/test_robot_controller/test_state_transitions.cpp`; DoD: `IDLE -> MANUAL`, cardinal sang chéo, chéo sang chéo, `MANUAL -> LINE_TRACKING`, `STOP` và thay thế lệnh không bao giờ để chuyển động cũ tiếp tục.
-- [ ] T013 [P] [US1] Viết kiểm thử an toàn khi timeout/mất kết nối trong `test/test_robot_controller/test_safety_timeout.cpp`; DoD: timeout và mất kết nối gọi `stopAll()`, đặt tốc độ về 0, chuyển sang `IDLE`, cung cấp đúng lý do và có tính idempotent.
+- [X] T011 [P] [US1] Viết kiểm thử xác thực lệnh 8 hướng trong `test/test_robot_controller/test_direction_validation.cpp`; DoD: cả tám giá trị hướng đều được chấp nhận, hướng không biết/thiếu bị từ chối, tốc độ ngoài khoảng 0–100 bị từ chối và hướng chéo không hỗ trợ khiến trạng thái cùng động cơ dừng.
+- [X] T012 [P] [US1] Viết kiểm thử chuyển trạng thái và thay thế lệnh trong `test/test_robot_controller/test_state_transitions.cpp`; DoD: `IDLE -> MANUAL`, cardinal sang chéo, chéo sang chéo, `MANUAL -> LINE_TRACKING`, `STOP` và thay thế lệnh không bao giờ để chuyển động cũ tiếp tục.
+- [X] T013 [P] [US1] Viết kiểm thử an toàn khi timeout/mất kết nối trong `test/test_robot_controller/test_safety_timeout.cpp`; DoD: timeout và mất kết nối gọi `stopAll()`, đặt tốc độ về 0, chuyển sang `IDLE`, cung cấp đúng lý do và có tính idempotent.
 
 ### Triển khai cho User Story 1
 
